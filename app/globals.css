@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #071019;
+  color: #eef8f7;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background-image:
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(45, 212, 191, 0.12),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(56, 189, 248, 0.09),
+      transparent 28%
+    );
+}
+.glass {
+  background: linear-gradient(
+    140deg,
+    rgba(17, 34, 45, 0.88),
+    rgba(9, 22, 31, 0.82)
+  );
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px);
+}
+.grid-dots {
+  background-image: radial-gradient(
+    rgba(148, 163, 184, 0.18) 1px,
+    transparent 1px
+  );
+  background-size: 16px 16px;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 2px;
+}
