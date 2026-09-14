@@ -1,4 +1,4 @@
-import { normalizeDay, shiftFor } from "../shift-definitions";
+import { normalizeDay } from "../shift-definitions";
 import { daysInMonth, weekday } from "../date-validator";
 import type { RotaExtractionResult, ScheduleDay } from "@/types/rota";
 
