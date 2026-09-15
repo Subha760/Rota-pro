@@ -20,6 +20,7 @@ export function UploadZone({
   const camera = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState("Ready for a rota");
   const [busy, setBusy] = useState(false);
+  const [staffName, setStaffName] = useState("");
   async function send(file?: File) {
     if (!file) return;
     if (
@@ -39,6 +40,7 @@ export function UploadZone({
     try {
       const form = new FormData();
       form.set("file", file);
+      if (staffName.trim()) form.set("staffName", staffName.trim());
       const r = await fetch("/api/ocr/parse", { method: "POST", body: form });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Parse failed");
@@ -88,6 +90,16 @@ export function UploadZone({
           </span>
         </span>
       </button>
+      <label className="mt-3 block text-xs font-medium text-slate-300">
+        Your name in the rota (recommended)
+        <input
+          value={staffName}
+          onChange={(event) => setStaffName(event.target.value)}
+          disabled={busy}
+          placeholder="Example: Subhajit"
+          className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-3 text-sm text-white outline-none transition focus:border-teal-400"
+        />
+      </label>
       <input
         ref={input}
         hidden

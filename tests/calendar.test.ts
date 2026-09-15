@@ -25,3 +25,9 @@ test("numeric rota date and SO rest-day code are supported", () => {
   assert.equal(parsed.metadata.detected_month,10); assert.equal(parsed.schedule[30].raw_code,"OFF");
 });
 test("OCR quality rewards rota structure", () => assert.ok(ocrQuality(`September 2026 ${Array(28).fill("M").join(" ")}`) > 0.9));
+test("parser recovers shift cells joined together by table OCR", () => {
+  const joined = "MENOFFMENOFFMENOFFMENOFFMENOFFMENOFFMENOFFME";
+  const parsed = parseRotaText(`SEPTEMBER 2026\nSUBHAJIT ${joined}`, { staffName: "Subhajit" });
+  assert.equal(parsed.schedule.filter((item) => item.raw_code !== "?").length, 30);
+  assert.deepEqual(parsed.schedule.slice(0, 4).map((item) => item.raw_code), ["M", "E", "N", "OFF"]);
+});
