@@ -34,7 +34,7 @@ async function recognize(worker: Awaited<ReturnType<typeof createWorker>>, bytes
 async function enhancedImages(bytes: Buffer) {
   const base = sharp(bytes, { failOn: "none", limitInputPixels: 50_000_000 })
     .rotate()
-    .resize({ width: 2600, height: 2600, fit: "inside", withoutEnlargement: false })
+    .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: false })
     .flatten({ background: "white" })
     .grayscale()
     .normalize();
