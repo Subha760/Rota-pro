@@ -50,7 +50,18 @@ export function UploadZone({
           setStatus("PaddleOCR fallback → server grid scan…");
         }
       }
-      const r = await fetch("/api/ocr/parse", { method: "POST", body: form });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 90_000);
+      let r: Response;
+      try {
+        r = await fetch("/api/ocr/parse", {
+          method: "POST",
+          body: form,
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeout);
+      }
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Parse failed");
       onParsed(data);
