@@ -154,46 +154,46 @@ export async function paddleRotaText(file: File, staffName: string) {
     pageContext.imageSmoothingEnabled = true;
     pageContext.imageSmoothingQuality = "high";
     pageContext.drawImage(sourceBitmap, 0, 0, pageCanvas.width, pageCanvas.height);
-    result = await ocr(pageCanvas, { model: V6_SMALL_MODEL, flatten: true });
-    target = findTarget();
     pageSource = pageCanvas;
     pageWidth = pageCanvas.width;
     pageHeight = pageCanvas.height;
-    if (!target || target.similarity < 0.45) {
-      // Names occupy only a small fraction of a full photographed worksheet.
-      // Re-read the left-hand staff columns at a much higher effective
-      // resolution before allowing table structure to choose a fallback row.
-      // This prevents a complete, unrelated row near the top of the sheet
-      // from beating a faint but correctly named row lower down the page.
-      const nameColumnWidth = Math.round(pageWidth * 0.42);
-      const nameScale = Math.min(3, Math.max(1.75, 2600 / nameColumnWidth));
-      const nameCanvas = document.createElement("canvas");
-      nameCanvas.width = Math.round(nameColumnWidth * nameScale);
-      nameCanvas.height = Math.round(pageHeight * nameScale);
-      const nameContext = nameCanvas.getContext("2d");
-      if (!nameContext) throw new Error("Could not enlarge the rota staff column.");
-      nameContext.imageSmoothingEnabled = true;
-      nameContext.imageSmoothingQuality = "high";
-      nameContext.drawImage(pageCanvas, 0, 0, nameColumnWidth, pageHeight, 0, 0, nameCanvas.width, nameCanvas.height);
 
-      const fullPageResult = result;
-      result = await ocr(nameCanvas, { model: V6_SMALL_MODEL, flatten: true });
-      const focusedTarget = findTarget();
-      result = fullPageResult;
-      if (focusedTarget && focusedTarget.similarity >= 0.45) {
-        target = {
-          similarity: focusedTarget.similarity,
-          item: {
-            ...focusedTarget.item,
-            box: {
-              x: focusedTarget.item.box.x / nameScale,
-              y: focusedTarget.item.box.y / nameScale,
-              width: focusedTarget.item.box.width / nameScale,
-              height: focusedTarget.item.box.height / nameScale,
-            },
+    // Names occupy only a small fraction of a full photographed worksheet.
+    // Scan that column first with the fast mobile model. If it finds the
+    // requested employee, we can skip an expensive full-page V6 pass and go
+    // straight to the high-resolution duty-row crop.
+    const initialResult = result;
+    const nameColumnWidth = Math.round(pageWidth * 0.42);
+    const nameScale = Math.min(2, Math.max(1.5, 2100 / nameColumnWidth));
+    const nameCanvas = document.createElement("canvas");
+    nameCanvas.width = Math.round(nameColumnWidth * nameScale);
+    nameCanvas.height = Math.round(pageHeight * nameScale);
+    const nameContext = nameCanvas.getContext("2d");
+    if (!nameContext) throw new Error("Could not enlarge the rota staff column.");
+    nameContext.imageSmoothingEnabled = true;
+    nameContext.imageSmoothingQuality = "high";
+    nameContext.drawImage(pageCanvas, 0, 0, nameColumnWidth, pageHeight, 0, 0, nameCanvas.width, nameCanvas.height);
+    result = await ocr(nameCanvas, { model: V5_EN_MOBILE_MODEL, flatten: true });
+    const focusedTarget = findTarget();
+    result = initialResult;
+    if (focusedTarget && focusedTarget.similarity >= 0.45) {
+      target = {
+        similarity: focusedTarget.similarity,
+        item: {
+          ...focusedTarget.item,
+          box: {
+            x: focusedTarget.item.box.x / nameScale,
+            y: focusedTarget.item.box.y / nameScale,
+            width: focusedTarget.item.box.width / nameScale,
+            height: focusedTarget.item.box.height / nameScale,
           },
-        };
-      }
+        },
+      };
+    }
+
+    if (!target || target.similarity < 0.45) {
+      result = await ocr(pageCanvas, { model: V6_SMALL_MODEL, flatten: true });
+      target = findTarget();
     }
     if (!target || target.similarity < 0.45) {
       target = findTarget(pageWidth * 0.38);
@@ -288,7 +288,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     if (line) line.push(item);
     else headingLines.push([item]);
   }
-  const observedHeight = pageHeight || Math.max(...result.results.map((item) => item.box.y + item.box.height), 1);
+  const observedHeight = Math.max(...result.results.map((item) => item.box.y + item.box.height), 1);
   const datePattern = new RegExp(`(${MONTHS.join("|")})\\s*[-/]?\\s*(20\\d{2})`, "i");
   const reconstructedHeading = headingLines
     .map((line) => {
