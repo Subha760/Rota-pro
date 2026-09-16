@@ -9,6 +9,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import type { RotaExtractionResult } from "@/types/rota";
+import { paddleRotaText } from "@/lib/ocr/browser-paddle";
 export function UploadZone({
   onParsed,
   onFileReady,
@@ -41,6 +42,14 @@ export function UploadZone({
       const form = new FormData();
       form.set("file", file);
       if (staffName.trim()) form.set("staffName", staffName.trim());
+      if (/^image\//.test(file.type) && staffName.trim()) {
+        try {
+          setStatus("Private PaddleOCR cell scan…");
+          form.set("clientOcrText", await paddleRotaText(file, staffName.trim()));
+        } catch {
+          setStatus("PaddleOCR fallback → server grid scan…");
+        }
+      }
       const r = await fetch("/api/ocr/parse", { method: "POST", body: form });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Parse failed");

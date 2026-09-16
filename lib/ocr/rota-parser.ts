@@ -62,11 +62,12 @@ export function ocrQuality(text: string) {
 
 function detectedDate(text: string, overrides: { month?: number; year?: number }) {
   const lower = text.toLowerCase();
+  const explicit = text.match(/ROTA_DATE\s*:\s*(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})/i);
   const namedMonth = MONTHS.findIndex((month) => lower.includes(month)) + 1;
   const numeric = text.match(/\b(?:0?[1-9]|[12]\d|3[01])[\/.\-](0?[1-9]|1[0-2])[\/.\-](20\d{2})\b/);
   return {
-    month: overrides.month || namedMonth || Number(numeric?.[1]),
-    year: overrides.year || Number(text.match(/(20\d{2})/)?.[1] || numeric?.[2]),
+    month: overrides.month || (explicit ? MONTHS.indexOf(explicit[1].toLowerCase()) + 1 : 0) || namedMonth || Number(numeric?.[1]),
+    year: overrides.year || Number(explicit?.[2] || text.match(/(20\d{2})/)?.[1] || numeric?.[2]),
   };
 }
 
