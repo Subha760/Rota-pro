@@ -106,11 +106,37 @@ export async function paddleRotaText(file: File, staffName: string) {
   const bytes = await file.arrayBuffer();
   let result = await ocr(bytes, { model: V5_EN_MOBILE_MODEL, flatten: true });
   const wanted = staffName.toUpperCase().replace(/[^A-Z]/g, "");
-  const findTarget = () => result.results.map((item) => {
+  const findTarget = () => {
+    const ordered = [...result.results].sort((a, b) => a.box.x - b.box.x);
+    const joined = ordered.flatMap((item, index) => {
+      const sameRow = ordered.slice(index + 1).filter((next) => {
+        const center = item.box.y + item.box.height / 2;
+        const nextCenter = next.box.y + next.box.height / 2;
+        const gap = next.box.x - (item.box.x + item.box.width);
+        return Math.abs(center - nextCenter) <= Math.max(item.box.height, next.box.height) * 0.7 &&
+          gap >= 0 && gap <= Math.max(item.box.height, next.box.height) * 5;
+      }).slice(0, 2);
+      const candidates = [item];
+      let text = item.text;
+      let right = item.box.x + item.box.width;
+      for (const next of sameRow) {
+        text += next.text;
+        right = Math.max(right, next.box.x + next.box.width);
+        candidates.push({
+          ...item,
+          text,
+          confidence: Math.min(item.confidence, next.confidence),
+          box: { ...item.box, width: right - item.box.x },
+        });
+      }
+      return candidates;
+    });
+    return joined.map((item) => {
       const seen = item.text.toUpperCase().replace(/[^A-Z]/g, "");
       const similarity = seen && wanted ? 1 - editDistance(seen, wanted) / Math.max(seen.length, wanted.length) : 0;
       return { item, similarity };
     }).sort((a, b) => b.similarity - a.similarity)[0];
+  };
   let target = findTarget();
   let pageSource: CanvasImageSource | null = null;
   let pageWidth = 0;
