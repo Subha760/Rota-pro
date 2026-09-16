@@ -134,7 +134,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     // Keep the crop inside the detected row. A wider band admits characters
     // from the nurse immediately above/below and can shift otherwise correct
     // cells into neighbouring day columns on dense Excel photographs.
-    const rowHeight = Math.max(target.item.box.height * 1.9, 16);
+    const rowHeight = Math.max(target.item.box.height * 1.9, 8);
     const sourceY = Math.max(0, centerY - rowHeight / 2);
     const sourceX = Math.max(0, target.item.box.x + target.item.box.width);
     const sourceWidth = bitmap.width - sourceX;
@@ -157,8 +157,13 @@ export async function paddleRotaText(file: File, staffName: string) {
   if (codes.length < 28 || codes.length > 31) throw new Error(`Local OCR found ${codes.length} duty cells instead of 28–31.`);
 
   let heading = result.text;
-  const hasMonth = MONTHS.some((month) => heading.toLowerCase().includes(month));
-  if (!hasMonth || !/20\d{2}/.test(heading)) {
+  const datedHeadings = result.results
+    .filter((item) => MONTHS.some((month) => item.text.toLowerCase().includes(month)) && /20\d{2}/.test(item.text))
+    .sort((a, b) => b.box.height - a.box.height);
+  const sheetHeading = datedHeadings[0]?.text.match(new RegExp(`(${MONTHS.join("|")})\\s*[-/]?\\s*(20\\d{2})`, "i"));
+  if (sheetHeading) {
+    heading += `\nROTA_DATE: ${sheetHeading[1]} ${sheetHeading[2]}`;
+  } else {
     const fallback = filenameDate(file.name);
     if (fallback) heading += `\nROTA_DATE: ${fallback}`;
   }
