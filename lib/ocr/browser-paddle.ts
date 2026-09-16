@@ -59,9 +59,33 @@ function bestCodeLine<T extends { text: string; confidence: number; box: { y: nu
   })).sort((a, b) => Math.abs(30 - a.length) - Math.abs(30 - b.length));
   let best = candidates[0] ?? [];
   if (best.length > 31 && best.length <= 35) {
-    best = [...best]
-      .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 30);
+    const ordered = [...best].sort((a, b) => a.x - b.x);
+    let gridBest: typeof best = [];
+    let gridScore = -Infinity;
+    for (let left = 0; left < Math.min(5, ordered.length); left++) {
+      for (let right = Math.max(left + 29, ordered.length - 5); right < ordered.length; right++) {
+        const step = (ordered[right].x - ordered[left].x) / 29;
+        if (step <= 0) continue;
+        const slots: Array<(typeof ordered)[number] | undefined> = Array(30);
+        let residual = 0;
+        for (const token of ordered) {
+          const slot = Math.round((token.x - ordered[left].x) / step);
+          if (slot < 0 || slot >= 30) continue;
+          const distance = Math.abs(token.x - (ordered[left].x + slot * step));
+          if (distance > step * 0.48) continue;
+          const current = slots[slot];
+          if (!current || token.confidence > current.confidence) slots[slot] = token;
+          residual += distance / step;
+        }
+        const selected = slots.filter((token): token is (typeof ordered)[number] => Boolean(token));
+        const score = selected.length * 100 + selected.reduce((sum, token) => sum + token.confidence, 0) - residual;
+        if (score > gridScore) {
+          gridScore = score;
+          gridBest = selected;
+        }
+      }
+    }
+    if (gridBest.length === 30) best = gridBest;
   }
   return best.sort((a, b) => a.x - b.x).map((token) => token.code);
 }
