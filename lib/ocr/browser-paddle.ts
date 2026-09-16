@@ -145,6 +145,7 @@ export async function paddleRotaText(file: File, staffName: string) {
   let forceRowCrop = false;
 
   if (!target || target.similarity < 0.45) {
+    forceRowCrop = true;
     sourceBitmap = await createImageBitmap(new Blob([bytes], { type: file.type }));
     const pageCanvas = document.createElement("canvas");
     const pageScale = Math.min(2.25, 3000 / sourceBitmap.width);
