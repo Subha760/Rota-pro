@@ -251,7 +251,10 @@ export async function paddleRotaText(file: File, staffName: string) {
     // cells into neighbouring day columns on dense Excel photographs.
     const rowHeight = Math.max(target.item.box.height * 1.35, 8);
     const sourceY = Math.max(0, centerY - rowHeight / 2);
-    const sourceX = Math.max(0, target.item.box.x + target.item.box.width);
+    // Joined OCR boxes can accidentally extend from the employee name through
+    // the ID column and into the first duty cells. Never let that fuzzy box
+    // push the crop past the usual left edge of the day grid.
+    const sourceX = Math.max(0, Math.min(target.item.box.x + target.item.box.width, pageWidth * 0.19));
     const sourceWidth = pageWidth - sourceX;
     const sourceHeight = Math.min(rowHeight, pageHeight - sourceY);
     const scale = Math.min(8, Math.max(2, 120 / sourceHeight));
