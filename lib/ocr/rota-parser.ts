@@ -6,11 +6,11 @@ const MONTHS = [
   "january", "february", "march", "april", "may", "june",
   "july", "august", "september", "october", "november", "december",
 ];
-const SHIFT_TOKEN = /^(?:M|MR|MO|E|EV|AF|N|NS|NT|D|GEN|G|L|LD|SPL|SD|OC|ONC|OFF|WO|RD|X|GH|PH|NH|SO|CL|SL|ML|EL|PL|AL|C\/O|CO|COMP|CCL|MAT|PAT|OD|TRG|CME|M\+E|E\+N|M\+N)$/;
+const SHIFT_TOKEN = /^(?:M|MR|MO|E|EV|AF|N|NS|NT|N\/O|D|GEN|G|L|LD|SPL|SD|OC|ONC|OFF|WO|RD|X|GH|PH|NH|SO|CL|SL|ML|EL|PL|AL|C\/O|CO|COMP|CCL|MAT|PAT|OD|TRG|CME|M\+E|E\+N|M\+N)$/;
 const CLEAN = /^[^A-Z0-9/+]+|[^A-Z0-9/+]+$/g;
 const SEGMENTS = [
   "OFF", "COMP", "TRG", "CME", "SPL", "GEN", "ONC", "CCL", "MAT", "PAT",
-  "M+E", "E+N", "M+N", "C/O", "MR", "MO", "EV", "AF", "NS", "NT", "LD",
+  "M+E", "E+N", "M+N", "C/O", "N/O", "MR", "MO", "EV", "AF", "NS", "NT", "LD",
   "SD", "OC", "WO", "RD", "GH", "PH", "NH", "SO", "CL", "SL", "ML", "EL",
   "PL", "AL", "CO", "OD", "M", "E", "N", "D", "G", "L", "X",
 ];
@@ -55,7 +55,7 @@ export function consensusText(texts: string[]) {
 export function ocrQuality(text: string) {
   const tokens = shiftTokens(text);
   const hasMonth = MONTHS.some((month) => text.toLowerCase().includes(month));
-  const hasYear = /\b20\d{2}\b/.test(text);
+  const hasYear = /20\d{2}/.test(text);
   const shiftScore = Math.min(tokens.length / 28, 1);
   return Math.min(1, shiftScore * 0.72 + (hasMonth ? 0.14 : 0) + (hasYear ? 0.14 : 0));
 }
@@ -66,7 +66,7 @@ function detectedDate(text: string, overrides: { month?: number; year?: number }
   const numeric = text.match(/\b(?:0?[1-9]|[12]\d|3[01])[\/.\-](0?[1-9]|1[0-2])[\/.\-](20\d{2})\b/);
   return {
     month: overrides.month || namedMonth || Number(numeric?.[1]),
-    year: overrides.year || Number(text.match(/\b(20\d{2})\b/)?.[1] || numeric?.[2]),
+    year: overrides.year || Number(text.match(/(20\d{2})/)?.[1] || numeric?.[2]),
   };
 }
 
@@ -119,7 +119,7 @@ export function parseRotaText(
 
   const total = daysInMonth(year, month);
   const numbered = new Map<number, string>();
-  const numberedPattern = /\b([1-9]|[12]\d|3[01])\s*[:.)-]?\s*(M\+E|E\+N|M\+N|M|MR|MO|E|EV|AF|N|NS|NT|D|GEN|G|L|LD|SPL|SD|OC|ONC|OFF|0FF|WO|RD|X|GH|PH|NH|SO|CL|SL|ML|EL|PL|AL|C[\\/]O|CO|COMP|CCL|MAT|PAT|OD|TRG|CME)\b/gi;
+  const numberedPattern = /\b([1-9]|[12]\d|3[01])\s*[:.)-]?\s*(M\+E|E\+N|M\+N|M|MR|MO|E|EV|AF|N\/O|N|NS|NT|D|GEN|G|L|LD|SPL|SD|OC|ONC|OFF|0FF|WO|RD|X|GH|PH|NH|SO|CL|SL|ML|EL|PL|AL|C[\\/]O|CO|COMP|CCL|MAT|PAT|OD|TRG|CME)\b/gi;
   let hit: RegExpExecArray | null;
   while ((hit = numberedPattern.exec(text))) numbered.set(Number(hit[1]), fixOcrToken(hit[2]));
 

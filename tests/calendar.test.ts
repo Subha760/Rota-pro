@@ -31,3 +31,8 @@ test("parser recovers shift cells joined together by table OCR", () => {
   assert.equal(parsed.schedule.filter((item) => item.raw_code !== "?").length, 30);
   assert.deepEqual(parsed.schedule.slice(0, 4).map((item) => item.raw_code), ["M", "E", "N", "OFF"]);
 });
+test("camera-noisy year and night-off cells are recovered", () => {
+  const parsed = parseRotaText(`DUTY ROTA MONTH SEPTEMBER 12026\n1: E\n2: M\n3: OFF\n4: N/O`, { staffName: "Subhajith" });
+  assert.equal(parsed.metadata.detected_year, 2026);
+  assert.equal(parsed.schedule[3].raw_code, "OFF");
+});

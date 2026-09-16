@@ -21,7 +21,7 @@ export const SHIFT_DEFINITIONS: ShiftDefinition[] = [
   { canonical:"L", aliases:["L","LD"], type:"LONG_DAY", label:"Long day", start:"07:30", end:"20:30", hours:13, calendar:"timed", color:"#fb7185", badge:"bg-rose-400/15 text-rose-200 border-rose-400/30" },
   { canonical:"SPL", aliases:["SPL","SD"], type:"SPLIT", label:"Split", hours:8, calendar:"timed", color:"#c084fc", badge:"bg-purple-400/15 text-purple-200 border-purple-400/30", segments:[{start:"08:00",end:"12:00",title:"Split duty 1"},{start:"16:00",end:"20:00",title:"Split duty 2"}] },
   { canonical:"OC", aliases:["OC","ONC"], type:"ON_CALL", label:"On call", start:"08:00", end:"20:00", hours:12, calendar:"timed", color:"#a3e635", badge:"bg-lime-400/15 text-lime-200 border-lime-400/30" },
-  { canonical:"OFF", aliases:["OFF","WO","RD","X","SO"], type:"OFF", label:"Rest day", hours:0, calendar:"omit", color:"#64748b", badge:"bg-slate-400/10 text-slate-300 border-slate-500/30" },
+  { canonical:"OFF", aliases:["OFF","WO","RD","X","SO","N/O"], type:"OFF", label:"Rest day", hours:0, calendar:"omit", color:"#64748b", badge:"bg-slate-400/10 text-slate-300 border-slate-500/30" },
   { canonical:"GH", aliases:["GH","PH","NH"], type:"GH", label:"Public holiday", hours:0, calendar:"all-day", color:"#22c55e", badge:"bg-green-400/15 text-green-200 border-green-400/30" },
   { canonical:"CL", aliases:["CL"], type:"CL", label:"Casual leave", hours:0, calendar:"all-day", color:"#f472b6", badge:"bg-pink-400/15 text-pink-200 border-pink-400/30" },
   { canonical:"SL", aliases:["SL","ML"], type:"SL", label:"Sick leave", hours:0, calendar:"all-day", color:"#ef4444", badge:"bg-red-400/15 text-red-200 border-red-400/30" },
