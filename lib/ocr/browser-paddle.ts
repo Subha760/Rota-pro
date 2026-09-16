@@ -96,7 +96,7 @@ function filenameDate(name: string) {
 }
 
 export async function paddleRotaText(file: File, staffName: string) {
-  const { ocr, V5_EN_MOBILE_MODEL } = await import("ppu-paddle-ocr/web");
+  const { ocr, V5_EN_MOBILE_MODEL, V6_SMALL_MODEL } = await import("ppu-paddle-ocr/web");
   const bytes = await file.arrayBuffer();
   const result = await ocr(bytes, { model: V5_EN_MOBILE_MODEL, flatten: true });
   const wanted = staffName.toUpperCase().replace(/[^A-Z]/g, "");
@@ -144,7 +144,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
     bitmap.close();
 
-    const rowResult = await ocr(canvas, { model: V5_EN_MOBILE_MODEL, flatten: true });
+    const rowResult = await ocr(canvas, { model: V6_SMALL_MODEL, flatten: true });
     rowItems = rowResult.results.sort((a, b) => a.box.x - b.box.x);
     codes = bestCodeLine(rowItems);
   }
