@@ -128,7 +128,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     // Keep the crop inside the detected row. A wider band admits characters
     // from the nurse immediately above/below and can shift otherwise correct
     // cells into neighbouring day columns on dense Excel photographs.
-    const rowHeight = Math.max(target.item.box.height * 1.55, 14);
+    const rowHeight = Math.max(target.item.box.height * 1.9, 16);
     const sourceY = Math.max(0, centerY - rowHeight / 2);
     const sourceX = Math.max(0, target.item.box.x + target.item.box.width);
     const sourceWidth = bitmap.width - sourceX;
