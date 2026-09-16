@@ -142,6 +142,7 @@ export async function paddleRotaText(file: File, staffName: string) {
   let pageWidth = 0;
   let pageHeight = 0;
   let sourceBitmap: ImageBitmap | null = null;
+  let forceRowCrop = false;
 
   if (!target || target.similarity < 0.45) {
     sourceBitmap = await createImageBitmap(new Blob([bytes], { type: file.type }));
@@ -177,6 +178,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     const focusedTarget = findTarget();
     result = initialResult;
     if (focusedTarget && focusedTarget.similarity >= 0.45) {
+      forceRowCrop = true;
       target = {
         similarity: focusedTarget.similarity,
         item: {
@@ -239,7 +241,7 @@ export async function paddleRotaText(file: File, staffName: string) {
   // high. Once the full-page pass has located the requested nurse, enlarge
   // that row and recognize it again. This is both faster and substantially
   // more accurate than sending the whole staff sheet through a second engine.
-  if (codes.length < 28 || codes.length > 31) {
+  if (forceRowCrop || codes.length < 28 || codes.length > 31) {
     if (!pageSource) {
       sourceBitmap = await createImageBitmap(new Blob([bytes], { type: file.type }));
       pageSource = sourceBitmap;
