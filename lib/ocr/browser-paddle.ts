@@ -229,7 +229,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     .filter((item) => {
       const itemY = item.box.y + item.box.height / 2;
       return item.box.x > target.item.box.x + target.item.box.width &&
-        Math.abs(itemY - centerY) <= Math.max(target.item.box.height, item.box.height) * 0.75;
+        Math.abs(itemY - centerY) <= Math.max(target.item.box.height, item.box.height) * 0.55;
     })
     .sort((a, b) => a.box.x - b.box.x);
 
@@ -249,7 +249,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     // Keep the crop inside the detected row. A wider band admits characters
     // from the nurse immediately above/below and can shift otherwise correct
     // cells into neighbouring day columns on dense Excel photographs.
-    const rowHeight = Math.max(target.item.box.height * 1.9, 8);
+    const rowHeight = Math.max(target.item.box.height * 1.35, 8);
     const sourceY = Math.max(0, centerY - rowHeight / 2);
     const sourceX = Math.max(0, target.item.box.x + target.item.box.width);
     const sourceWidth = pageWidth - sourceX;
