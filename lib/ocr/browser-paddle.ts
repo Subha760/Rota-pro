@@ -34,7 +34,7 @@ function codesFromText(value: string) {
     .filter(Boolean);
 }
 
-function bestCodeLine<T extends { text: string; box: { y: number; height: number; x: number } }>(items: T[]) {
+function bestCodeLine<T extends { text: string; confidence: number; box: { y: number; height: number; x: number; width: number } }>(items: T[]) {
   const ordered = [...items].sort((a, b) =>
     (a.box.y + a.box.height / 2) - (b.box.y + b.box.height / 2) || a.box.x - b.box.x,
   );
@@ -49,9 +49,21 @@ function bestCodeLine<T extends { text: string; box: { y: number; height: number
     if (line) line.push(item);
     else lines.push([item]);
   }
-  return lines
-    .map((line) => line.sort((a, b) => a.box.x - b.box.x).flatMap((item) => codesFromText(item.text)))
-    .sort((a, b) => Math.abs(30 - a.length) - Math.abs(30 - b.length))[0] ?? [];
+  const candidates = lines.map((line) => line.flatMap((item) => {
+    const codes = codesFromText(item.text);
+    return codes.map((code, index) => ({
+      code,
+      confidence: item.confidence,
+      x: item.box.x + item.box.width * ((index + 0.5) / codes.length),
+    }));
+  })).sort((a, b) => Math.abs(30 - a.length) - Math.abs(30 - b.length));
+  let best = candidates[0] ?? [];
+  if (best.length > 31 && best.length <= 35) {
+    best = [...best]
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 30);
+  }
+  return best.sort((a, b) => a.x - b.x).map((token) => token.code);
 }
 
 function filenameDate(name: string) {
