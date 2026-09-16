@@ -106,7 +106,7 @@ export async function paddleRotaText(file: File, staffName: string) {
   const bytes = await file.arrayBuffer();
   let result = await ocr(bytes, { model: V5_EN_MOBILE_MODEL, flatten: true });
   const wanted = staffName.toUpperCase().replace(/[^A-Z]/g, "");
-  const findTarget = () => {
+  const findTarget = (maximumX = Infinity) => {
     const ordered = [...result.results].sort((a, b) => a.box.x - b.box.x);
     const joined = ordered.flatMap((item, index) => {
       const sameRow = ordered.slice(index + 1).filter((next) => {
@@ -131,7 +131,7 @@ export async function paddleRotaText(file: File, staffName: string) {
       }
       return candidates;
     });
-    return joined.map((item) => {
+    return joined.filter((item) => item.box.x < maximumX).map((item) => {
       const seen = item.text.toUpperCase().replace(/[^A-Z]/g, "");
       const similarity = seen && wanted ? 1 - editDistance(seen, wanted) / Math.max(seen.length, wanted.length) : 0;
       return { item, similarity };
@@ -159,6 +159,9 @@ export async function paddleRotaText(file: File, staffName: string) {
     pageSource = pageCanvas;
     pageWidth = pageCanvas.width;
     pageHeight = pageCanvas.height;
+    if (!target || target.similarity < 0.45) {
+      target = findTarget(pageWidth * 0.38);
+    }
   }
   const leftColumnFallback = Boolean(target && pageWidth > 0 &&
     target.item.box.x < pageWidth * 0.38 && target.similarity >= 0.15);
