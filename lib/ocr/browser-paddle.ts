@@ -104,14 +104,36 @@ function filenameDate(name: string) {
 export async function paddleRotaText(file: File, staffName: string) {
   const { ocr, V5_EN_MOBILE_MODEL, V6_SMALL_MODEL } = await import("ppu-paddle-ocr/web");
   const bytes = await file.arrayBuffer();
-  const result = await ocr(bytes, { model: V5_EN_MOBILE_MODEL, flatten: true });
+  let result = await ocr(bytes, { model: V5_EN_MOBILE_MODEL, flatten: true });
   const wanted = staffName.toUpperCase().replace(/[^A-Z]/g, "");
-  const names = result.results.map((item) => {
-    const seen = item.text.toUpperCase().replace(/[^A-Z]/g, "");
-    const similarity = seen && wanted ? 1 - editDistance(seen, wanted) / Math.max(seen.length, wanted.length) : 0;
-    return { item, similarity };
-  }).sort((a, b) => b.similarity - a.similarity);
-  const target = names[0];
+  const findTarget = () => result.results.map((item) => {
+      const seen = item.text.toUpperCase().replace(/[^A-Z]/g, "");
+      const similarity = seen && wanted ? 1 - editDistance(seen, wanted) / Math.max(seen.length, wanted.length) : 0;
+      return { item, similarity };
+    }).sort((a, b) => b.similarity - a.similarity)[0];
+  let target = findTarget();
+  let pageSource: CanvasImageSource | null = null;
+  let pageWidth = 0;
+  let pageHeight = 0;
+  let sourceBitmap: ImageBitmap | null = null;
+
+  if (!target || target.similarity < 0.45) {
+    sourceBitmap = await createImageBitmap(new Blob([bytes], { type: file.type }));
+    const pageCanvas = document.createElement("canvas");
+    const pageScale = Math.min(2.25, 3000 / sourceBitmap.width);
+    pageCanvas.width = Math.round(sourceBitmap.width * pageScale);
+    pageCanvas.height = Math.round(sourceBitmap.height * pageScale);
+    const pageContext = pageCanvas.getContext("2d");
+    if (!pageContext) throw new Error("Could not enlarge the rota page.");
+    pageContext.imageSmoothingEnabled = true;
+    pageContext.imageSmoothingQuality = "high";
+    pageContext.drawImage(sourceBitmap, 0, 0, pageCanvas.width, pageCanvas.height);
+    result = await ocr(pageCanvas, { model: V6_SMALL_MODEL, flatten: true });
+    target = findTarget();
+    pageSource = pageCanvas;
+    pageWidth = pageCanvas.width;
+    pageHeight = pageCanvas.height;
+  }
   if (!target || target.similarity < 0.45) throw new Error("Named row was not found by local OCR.");
 
   const centerY = target.item.box.y + target.item.box.height / 2;
@@ -130,15 +152,20 @@ export async function paddleRotaText(file: File, staffName: string) {
   // that row and recognize it again. This is both faster and substantially
   // more accurate than sending the whole staff sheet through a second engine.
   if (codes.length < 28 || codes.length > 31) {
-    const bitmap = await createImageBitmap(new Blob([bytes], { type: file.type }));
+    if (!pageSource) {
+      sourceBitmap = await createImageBitmap(new Blob([bytes], { type: file.type }));
+      pageSource = sourceBitmap;
+      pageWidth = sourceBitmap.width;
+      pageHeight = sourceBitmap.height;
+    }
     // Keep the crop inside the detected row. A wider band admits characters
     // from the nurse immediately above/below and can shift otherwise correct
     // cells into neighbouring day columns on dense Excel photographs.
     const rowHeight = Math.max(target.item.box.height * 1.9, 8);
     const sourceY = Math.max(0, centerY - rowHeight / 2);
     const sourceX = Math.max(0, target.item.box.x + target.item.box.width);
-    const sourceWidth = bitmap.width - sourceX;
-    const sourceHeight = Math.min(rowHeight, bitmap.height - sourceY);
+    const sourceWidth = pageWidth - sourceX;
+    const sourceHeight = Math.min(rowHeight, pageHeight - sourceY);
     const scale = Math.min(8, Math.max(2, 120 / sourceHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.min(6000, Math.round(sourceWidth * scale));
@@ -147,8 +174,8 @@ export async function paddleRotaText(file: File, staffName: string) {
     if (!context) throw new Error("Could not prepare the named rota row.");
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
-    context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
+    context.drawImage(pageSource, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+    sourceBitmap?.close();
 
     const rowResult = await ocr(canvas, { model: V6_SMALL_MODEL, flatten: true });
     rowItems = rowResult.results.sort((a, b) => a.box.x - b.box.x);
