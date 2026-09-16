@@ -25,6 +25,35 @@ function normalizeCode(value: string) {
   return "";
 }
 
+function codesFromText(value: string) {
+  const direct = normalizeCode(value);
+  if (direct) return [direct];
+  const compact = value.toUpperCase().replace(/[^A-Z0-9/+]/g, "");
+  return (compact.match(/M\+E|E\+N|M\+N|N\/O|C\/O|OFF|JMM|GH|CL|SL|EL|M|E|N|G/g) ?? [])
+    .map(normalizeCode)
+    .filter(Boolean);
+}
+
+function bestCodeLine<T extends { text: string; box: { y: number; height: number; x: number } }>(items: T[]) {
+  const ordered = [...items].sort((a, b) =>
+    (a.box.y + a.box.height / 2) - (b.box.y + b.box.height / 2) || a.box.x - b.box.x,
+  );
+  const lines: T[][] = [];
+  for (const item of ordered) {
+    const center = item.box.y + item.box.height / 2;
+    const line = lines.find((candidate) => {
+      const anchor = candidate[0];
+      const anchorCenter = anchor.box.y + anchor.box.height / 2;
+      return Math.abs(center - anchorCenter) <= Math.max(item.box.height, anchor.box.height) * 0.6;
+    });
+    if (line) line.push(item);
+    else lines.push([item]);
+  }
+  return lines
+    .map((line) => line.sort((a, b) => a.box.x - b.box.x).flatMap((item) => codesFromText(item.text)))
+    .sort((a, b) => Math.abs(30 - a.length) - Math.abs(30 - b.length))[0] ?? [];
+}
+
 function filenameDate(name: string) {
   const match = name.match(/(20\d{2})(0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])/);
   return match ? `${MONTHS[Number(match[2]) - 1]} ${match[1]}` : "";
@@ -52,11 +81,7 @@ export async function paddleRotaText(file: File, staffName: string) {
     })
     .sort((a, b) => a.box.x - b.box.x);
 
-  let codes = rowItems.flatMap((item) => {
-    const direct = normalizeCode(item.text);
-    if (direct) return [direct];
-    return item.text.split(/\s+/).map(normalizeCode).filter(Boolean);
-  });
+  let codes = bestCodeLine(rowItems);
 
   // A complete photographed sheet makes each duty cell only a few pixels
   // high. Once the full-page pass has located the requested nurse, enlarge
@@ -82,11 +107,7 @@ export async function paddleRotaText(file: File, staffName: string) {
 
     const rowResult = await ocr(canvas, { model: V5_EN_MOBILE_MODEL, flatten: true });
     rowItems = rowResult.results.sort((a, b) => a.box.x - b.box.x);
-    codes = rowItems.flatMap((item) => {
-      const direct = normalizeCode(item.text);
-      if (direct) return [direct];
-      return item.text.split(/\s+/).map(normalizeCode).filter(Boolean);
-    });
+    codes = bestCodeLine(rowItems);
   }
   if (codes.length < 28 || codes.length > 31) throw new Error(`Local OCR found ${codes.length} duty cells instead of 28–31.`);
 

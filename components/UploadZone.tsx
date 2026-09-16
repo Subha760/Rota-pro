@@ -46,7 +46,8 @@ export function UploadZone({
         try {
           setStatus("Private PaddleOCR cell scan…");
           form.set("clientOcrText", await paddleRotaText(file, staffName.trim()));
-        } catch {
+        } catch (error) {
+          console.warn("Local PaddleOCR row scan failed", error);
           setStatus("PaddleOCR fallback → server grid scan…");
         }
       }
@@ -67,7 +68,9 @@ export function UploadZone({
       onParsed(data);
       setStatus(`${file.name} · ${data.schedule.length} days anchored`);
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Could not parse rota");
+      setStatus(e instanceof DOMException && e.name === "AbortError"
+        ? "OCR timed out. Try a closer photo of the named row."
+        : e instanceof Error ? e.message : "Could not parse rota");
     } finally {
       setBusy(false);
     }
