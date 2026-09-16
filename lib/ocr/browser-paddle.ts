@@ -161,6 +161,25 @@ export async function paddleRotaText(file: File, staffName: string) {
     pageHeight = pageCanvas.height;
     if (!target || target.similarity < 0.45) {
       target = findTarget(pageWidth * 0.38);
+      const structural = result.results
+        .filter((item) => item.box.x < pageWidth * 0.38 && item.text.replace(/[^A-Za-z]/g, "").length >= 3)
+        .map((item) => {
+          const seen = item.text.toUpperCase().replace(/[^A-Z]/g, "");
+          const similarity = seen ? 1 - editDistance(seen, wanted) / Math.max(seen.length, wanted.length) : 0;
+          const center = item.box.y + item.box.height / 2;
+          const row = result.results.filter((other) => {
+            const otherCenter = other.box.y + other.box.height / 2;
+            return other.box.x > item.box.x + item.box.width &&
+              Math.abs(otherCenter - center) <= Math.max(item.box.height, other.box.height) * 0.8;
+          });
+          const dutyCount = bestCodeLine(row).length;
+          return { item, similarity, dutyCount, score: similarity * 20 - Math.abs(30 - dutyCount) };
+        })
+        .filter((candidate) => candidate.dutyCount >= 20)
+        .sort((a, b) => b.score - a.score)[0];
+      if (structural && (!target || structural.score > target.similarity * 20 - 22)) {
+        target = { item: structural.item, similarity: Math.max(0.15, structural.similarity) };
+      }
     }
   }
   const leftColumnFallback = Boolean(target && pageWidth > 0 &&
