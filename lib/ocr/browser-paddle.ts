@@ -160,7 +160,11 @@ export async function paddleRotaText(file: File, staffName: string) {
     pageWidth = pageCanvas.width;
     pageHeight = pageCanvas.height;
   }
-  if (!target || target.similarity < 0.45) throw new Error("Named row was not found by local OCR.");
+  const leftColumnFallback = Boolean(target && pageWidth > 0 &&
+    target.item.box.x < pageWidth * 0.38 && target.similarity >= 0.28);
+  if (!target || (target.similarity < 0.45 && !leftColumnFallback)) {
+    throw new Error("Named row was not found by local OCR.");
+  }
 
   const centerY = target.item.box.y + target.item.box.height / 2;
   let rowItems = result.results
