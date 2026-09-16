@@ -85,7 +85,13 @@ function bestCodeLine<T extends { text: string; confidence: number; box: { y: nu
         }
       }
     }
-    if (gridBest.length === 30) best = gridBest;
+    if (gridBest.length === 30) {
+      best = gridBest;
+    } else {
+      best = [...best]
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 30);
+    }
   }
   return best.sort((a, b) => a.x - b.x).map((token) => token.code);
 }
