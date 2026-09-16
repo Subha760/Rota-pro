@@ -160,6 +160,42 @@ export async function paddleRotaText(file: File, staffName: string) {
     pageWidth = pageCanvas.width;
     pageHeight = pageCanvas.height;
     if (!target || target.similarity < 0.45) {
+      // Names occupy only a small fraction of a full photographed worksheet.
+      // Re-read the left-hand staff columns at a much higher effective
+      // resolution before allowing table structure to choose a fallback row.
+      // This prevents a complete, unrelated row near the top of the sheet
+      // from beating a faint but correctly named row lower down the page.
+      const nameColumnWidth = Math.round(pageWidth * 0.42);
+      const nameScale = Math.min(3, Math.max(1.75, 2600 / nameColumnWidth));
+      const nameCanvas = document.createElement("canvas");
+      nameCanvas.width = Math.round(nameColumnWidth * nameScale);
+      nameCanvas.height = Math.round(pageHeight * nameScale);
+      const nameContext = nameCanvas.getContext("2d");
+      if (!nameContext) throw new Error("Could not enlarge the rota staff column.");
+      nameContext.imageSmoothingEnabled = true;
+      nameContext.imageSmoothingQuality = "high";
+      nameContext.drawImage(pageCanvas, 0, 0, nameColumnWidth, pageHeight, 0, 0, nameCanvas.width, nameCanvas.height);
+
+      const fullPageResult = result;
+      result = await ocr(nameCanvas, { model: V6_SMALL_MODEL, flatten: true });
+      const focusedTarget = findTarget();
+      result = fullPageResult;
+      if (focusedTarget && focusedTarget.similarity >= 0.45) {
+        target = {
+          similarity: focusedTarget.similarity,
+          item: {
+            ...focusedTarget.item,
+            box: {
+              x: focusedTarget.item.box.x / nameScale,
+              y: focusedTarget.item.box.y / nameScale,
+              width: focusedTarget.item.box.width / nameScale,
+              height: focusedTarget.item.box.height / nameScale,
+            },
+          },
+        };
+      }
+    }
+    if (!target || target.similarity < 0.45) {
       target = findTarget(pageWidth * 0.38);
       const structural = result.results
         .filter((item) => item.box.x < pageWidth * 0.38 && item.text.replace(/[^A-Za-z]/g, "").length >= 3)
