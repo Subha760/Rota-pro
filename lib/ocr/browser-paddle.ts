@@ -272,10 +272,40 @@ export async function paddleRotaText(file: File, staffName: string) {
   if (codes.length < 28 || codes.length > 31) throw new Error(`Local OCR found ${codes.length} duty cells instead of 28–31.`);
 
   let heading = result.text;
+  // OCR frequently splits the worksheet title into several boxes (for
+  // example, "SEPTEMBER" and "2026"). Reconstruct visual lines before
+  // choosing the date, and penalize the tiny Excel window caption at the very
+  // top of a monitor photograph so it cannot override the larger sheet title.
+  const headingLines: Array<typeof result.results> = [];
+  for (const item of [...result.results].sort((a, b) =>
+    (a.box.y + a.box.height / 2) - (b.box.y + b.box.height / 2) || a.box.x - b.box.x,
+  )) {
+    const center = item.box.y + item.box.height / 2;
+    const line = headingLines.find((candidate) => {
+      const anchor = candidate[0];
+      return Math.abs(center - (anchor.box.y + anchor.box.height / 2)) <= Math.max(item.box.height, anchor.box.height) * 0.75;
+    });
+    if (line) line.push(item);
+    else headingLines.push([item]);
+  }
+  const observedHeight = pageHeight || Math.max(...result.results.map((item) => item.box.y + item.box.height), 1);
+  const datePattern = new RegExp(`(${MONTHS.join("|")})\\s*[-/]?\\s*(20\\d{2})`, "i");
+  const reconstructedHeading = headingLines
+    .map((line) => {
+      const ordered = [...line].sort((a, b) => a.box.x - b.box.x);
+      const text = ordered.map((item) => item.text).join(" ").replace(/\s+/g, " ");
+      const center = ordered.reduce((sum, item) => sum + item.box.y + item.box.height / 2, 0) / ordered.length;
+      const height = Math.max(...ordered.map((item) => item.box.height));
+      const upper = text.toUpperCase();
+      const score = height + (/MONTH/.test(upper) ? 40 : 0) + (/DUTY|ROTA/.test(upper) ? 20 : 0) - (center < observedHeight * 0.06 ? 60 : 0);
+      return { text, score };
+    })
+    .filter((line) => datePattern.test(line.text))
+    .sort((a, b) => b.score - a.score)[0];
   const datedHeadings = result.results
     .filter((item) => MONTHS.some((month) => item.text.toLowerCase().includes(month)) && /20\d{2}/.test(item.text))
     .sort((a, b) => b.box.height - a.box.height);
-  const sheetHeading = datedHeadings[0]?.text.match(new RegExp(`(${MONTHS.join("|")})\\s*[-/]?\\s*(20\\d{2})`, "i"));
+  const sheetHeading = (reconstructedHeading?.text ?? datedHeadings[0]?.text ?? "").match(datePattern);
   if (sheetHeading) {
     heading += `\nROTA_DATE: ${sheetHeading[1]} ${sheetHeading[2]}`;
   } else {
